@@ -1,0 +1,30 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="x-ua-compatible" content="ie=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>@ViewBag.Title Neige.tech</title>
+    @Styles.Render("~/Content/app.css")
+	@Styles.Render("~/Content/foundation.css")
+    @Scripts.Render("~/bundles/modernizr")
+	<link href="https://fonts.googleapis.com/css?family=Lato:300,400,700,900" rel="stylesheet">
+</head>
+<body>
+    <div class="container body-content">
+        @RenderBody()
+        <hr />
+        <footer>
+        </footer>
+    </div>
+
+	@Scripts.Render("~/Scripts/vendor/jquery.js")
+	@Scripts.Render("~/Scripts/vendor/jquery.js")
+	@Scripts.Render("~/Scripts/vendor/foundation.js")
+	@Scripts.Render("~/Scripts/app.js")
+    @Scripts.Render("~/bundles/jquery")
+    @Scripts.Render("~/bundles/bootstrap")
+    @RenderSection("scripts", required: false)
+</body>
+</html>

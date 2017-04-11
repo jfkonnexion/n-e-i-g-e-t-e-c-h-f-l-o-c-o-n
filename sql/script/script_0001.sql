@@ -1,0 +1,741 @@
+use NeigeTech
+GO
+
+IF OBJECT_ID('dbo.Fn_GetConnectedUsername') IS NOT NULL
+  DROP FUNCTION Fn_GetConnectedUsername
+GO
+
+CREATE function dbo.Fn_GetConnectedUsername()
+returns varchar(320)
+as
+begin
+	declare @username varchar(320)
+			
+
+	set @username = SUBSTRING(APP_NAME(), charindex(']',APP_NAME(),0)+1,len(APP_NAME()))	
+	if ~len(isnull(@username,''))>0
+		set @username = SYSTEM_USER
+
+	return @username
+end
+GO
+
+create table dbo.CONF_VERSION(
+	ID_CONF_VERSION int not null IDENTITY(1,1),
+	DB_VERSION varchar(40) not null,
+	DATE_CREATED datetime NOT NULL CONSTRAINT DF_CONF_VERSION_DATE_CREATED  DEFAULT (getdate()),
+	USER_CREATED varchar(320) NOT NULL,
+	DATE_MODIFY datetime NOT NULL CONSTRAINT DF_CONF_VERSION_DATE_MODIFY  DEFAULT (getdate()),
+	USER_MODIFY varchar(320) NOT NULL,
+	CONSTRAINT PK_CONF_VERSION primary key(ID_CONF_VERSION)
+)
+go
+alter table CONF_VERSION add CONSTRAINT DF_CONF_VERSION_USER_CREATED default dbo.Fn_GetConnectedUsername() for USER_CREATED;
+go
+alter table CONF_VERSION add CONSTRAINT DF_CONF_VERSION_USER_MODIFY default dbo.Fn_GetConnectedUsername() for USER_MODIFY;
+go
+
+
+IF OBJECT_ID('dbo.TR_CONF_VERSION_MODIFY') IS NOT NULL
+  DROP TRIGGER TR_CONF_VERSION_MODIFY
+GO
+
+create trigger TR_CONF_VERSION_MODIFY on CONF_VERSION
+for insert,update
+as
+
+if not update(DATE_CREATED) and not update(USER_CREATED) and not update(DATE_MODIFY) and not update(USER_MODIFY)
+begin
+	update a
+	set DATE_MODIFY = getdate(),
+		USER_MODIFY = dbo.Fn_GetConnectedUsername()
+	from CONF_VERSION a
+	join inserted b on a.ID_CONF_VERSION = b.ID_CONF_VERSION
+end
+return
+GO
+
+
+CREATE TABLE dbo.CONF_ERROR(
+	ID_CONF_ERROR int IDENTITY(1,1) NOT NULL,
+	NO_ERROR int NOT NULL,
+	FR_DESC varchar(255) NOT NULL,
+	EN_DESC varchar(255) NULL,
+	DATE_CREATED datetime NOT NULL CONSTRAINT DF_CONF_ERROR_DATE_CREATED  DEFAULT (getdate()),
+	USER_CREATED varchar(320) NOT NULL,
+	DATE_MODIFY datetime NOT NULL CONSTRAINT DF_CONF_ERROR_DATE_MODIFY  DEFAULT (getdate()),
+	USER_MODIFY varchar(320) NOT NULL,
+	CONSTRAINT PK_CONF_ERROR primary key(ID_CONF_ERROR),
+	CONSTRAINT PKU_CONF_ERROR UNIQUE (NO_ERROR)
+)
+alter table CONF_ERROR add CONSTRAINT DF_CONF_ERROR_USER_CREATED default dbo.Fn_GetConnectedUsername() for USER_CREATED;
+go
+alter table CONF_ERROR add CONSTRAINT DF_CONF_ERROR_USER_MODIFY default dbo.Fn_GetConnectedUsername() for USER_MODIFY;
+go
+
+IF OBJECT_ID('dbo.TR_CONF_ERROR_MODIFY') IS NOT NULL
+  DROP TRIGGER TR_CONF_ERROR_MODIFY
+GO
+
+create trigger TR_CONF_ERROR_MODIFY on CONF_ERROR
+for insert,update
+as
+
+if not update(DATE_CREATED) and not update(USER_CREATED) and not update(DATE_MODIFY) and not update(USER_MODIFY)
+begin
+	update a
+	set DATE_MODIFY = getdate(),
+		USER_MODIFY = dbo.Fn_GetConnectedUsername()
+	from CONF_ERROR a
+	join inserted b on a.ID_CONF_ERROR = b.ID_CONF_ERROR
+end
+return
+GO
+
+
+IF OBJECT_ID('dbo.Fn_GetErrorMsg') IS NOT NULL
+  DROP FUNCTION Fn_GetErrorMsg
+GO
+
+create function dbo.Fn_GetErrorMsg(@NoError int)
+returns varchar(255)
+as
+begin
+	declare @strError varchar(255)
+	if @NoError>50000
+		select @strError = FR_DESC from dbo.CONF_ERROR where NO_ERROR = @NoError
+
+	return @strError
+end
+
+GO
+
+CREATE TABLE dbo.APP_PLAN(
+	ID_PLAN int IDENTITY(1,1) NOT NULL,
+	HIERARCHICAL_LEVEL int not null,
+	FR_DESC varchar(80) NOT NULL,
+	EN_DESC varchar(80) NULL,
+	NB_ZONE_MAX int not null,
+	NB_MESSAGE_PER_MONTH_MAX int not null,	
+	PRICE_PER_MONTH smallmoney not null,
+	F_ACTIVE bit not null CONSTRAINT DF_APP_PLAN_F_ACTIVE default(1),
+	DATE_CREATED datetime NOT NULL CONSTRAINT DF_APP_PLAN_DATE_CREATED  DEFAULT (getdate()),
+	USER_CREATED varchar(320) NOT NULL,
+	DATE_MODIFY datetime NOT NULL CONSTRAINT DF_APP_PLAN_DATE_MODIFY  DEFAULT (getdate()),
+	USER_MODIFY varchar(320) NOT NULL,
+	CONSTRAINT PK_APP_PLAN primary key(ID_PLAN),
+	CONSTRAINT UQ_APP_PLAN_DESC_FR UNIQUE (FR_DESC)
+)
+alter table APP_PLAN add CONSTRAINT DF_APP_PLAN_USER_CREATED default dbo.Fn_GetConnectedUsername() for USER_CREATED;
+go
+alter table APP_PLAN add CONSTRAINT DF_APP_PLAN_USER_MODIFY default dbo.Fn_GetConnectedUsername() for USER_MODIFY;
+go
+
+
+IF OBJECT_ID('dbo.TR_APP_PLAN_MODIFY') IS NOT NULL
+  DROP TRIGGER TR_APP_PLAN_MODIFY
+GO
+
+create trigger TR_APP_PLAN_MODIFY on APP_PLAN
+for insert,update
+as
+
+if not update(DATE_CREATED) and not update(USER_CREATED) and not update(DATE_MODIFY) and not update(USER_MODIFY)
+begin
+	update a
+	set DATE_MODIFY = getdate(),
+		USER_MODIFY = dbo.Fn_GetConnectedUsername()
+	from APP_PLAN a
+	join inserted b on a.ID_PLAN = b.ID_PLAN
+end
+return
+GO
+
+CREATE TABLE dbo.COMP_COMPANY(
+	ID_COMP_COMPANY int IDENTITY(1,1) NOT NULL,
+	NAME varchar(500) not null,
+	ADDRESS VARCHAR(500) not null,
+	CITY varchar(255) not null,
+	ZIP_CODE varchar(10) not null,
+	PROVINCE char(2) not null CONSTRAINT DF_COMP_COMPANY_PROVINCE default('QC'),
+	COUNTRY char(2) not null CONSTRAINT DF_COMP_COMPANY_COUNTRY default('CA'),
+	PHONE varchar(50) not null,
+	PHONE_2 varchar(50) null,
+	PAIMENT_TOKEN varchar(255) null,
+	SMS_TOKEN varchar(255) null,	
+	ID_PLAN_ACTIVE int null,	
+	F_ACTIVE bit not null CONSTRAINT DF_COMP_COMPANY_F_ACTIVE default(1),	
+	DATE_CREATED datetime NOT NULL CONSTRAINT DF_COMP_COMPANY_DATE_CREATED  DEFAULT (getdate()),
+	USER_CREATED varchar(320) NOT NULL,
+	DATE_MODIFY datetime NOT NULL CONSTRAINT DF_COMP_COMPANY_DATE_MODIFY  DEFAULT (getdate()),
+	USER_MODIFY varchar(320) NOT NULL,
+	CONSTRAINT PK_COMP_COMPANY primary key(ID_COMP_COMPANY),	
+	CONSTRAINT FK_COMP_COMPANY_ID_PLAN FOREIGN KEY (ID_PLAN_ACTIVE) REFERENCES APP_PLAN(ID_PLAN),
+	CONSTRAINT UQ_COMP_COMPANY_NAME UNIQUE (NAME)
+)
+alter table COMP_COMPANY add CONSTRAINT DF_COMP_COMPANY_USER_CREATED default dbo.Fn_GetConnectedUsername() for USER_CREATED;
+go
+alter table COMP_COMPANY add CONSTRAINT DF_COMP_COMPANY_USER_MODIFY default dbo.Fn_GetConnectedUsername() for USER_MODIFY;
+go
+
+
+IF OBJECT_ID('dbo.TR_COMP_COMPANY_MODIFY') IS NOT NULL
+  DROP TRIGGER TR_COMP_COMPANY_MODIFY
+GO
+
+create trigger TR_COMP_COMPANY_MODIFY on COMP_COMPANY
+for insert,update
+as
+
+if not update(DATE_CREATED) and not update(USER_CREATED) and not update(DATE_MODIFY) and not update(USER_MODIFY)
+begin
+	update a
+	set DATE_MODIFY = getdate(),
+		USER_MODIFY = dbo.Fn_GetConnectedUsername()
+	from COMP_COMPANY a
+	join inserted b on a.ID_COMP_COMPANY = b.ID_COMP_COMPANY
+end
+return
+GO
+
+ 
+CREATE TABLE dbo.COMP_SUBSCRIPTION(
+	ID_COMP_SUBSCRIPTION int IDENTITY(1,1) NOT NULL,	
+	ID_COMP_COMPANY int not null,
+	ID_PLAN int not null,
+	DATE_START date not null,
+	NB_PAYMENT_DONE tinyint not null constraint DF_COMP_SUBSCRIPTION_NB_PAYMENT_DONE default(1),
+	NB_PAYMENT_REMAINING tinyint not null constraint DF_COMP_SUBSCRIPTION_NB_PAYMENT_REMAINING default(0),
+	RECURRENT_PAYMENT_DAY tinyint not null,
+	AMOUNT smallmoney not null,
+	NOTE varchar(500) null,
+	F_ACTIVE bit not null CONSTRAINT DF_COMP_SUBSCRIPTION_F_ACTIVE default(1),
+	DATE_CREATED datetime NOT NULL CONSTRAINT DF_COMP_SUBSCRIPTION_DATE_CREATED  DEFAULT (getdate()),
+	USER_CREATED varchar(320) NOT NULL,
+	DATE_MODIFY datetime NOT NULL CONSTRAINT DF_COMP_SUBSCRIPTION_DATE_MODIFY  DEFAULT (getdate()),
+	USER_MODIFY varchar(320) NOT NULL,
+	CONSTRAINT PK_COMP_SUBSCRIPTION primary key(ID_COMP_SUBSCRIPTION),	
+	CONSTRAINT FK_COMP_SUBSCRIPTION_ID_COMP_COMPANY foreign key(ID_COMP_COMPANY) references COMP_COMPANY(ID_COMP_COMPANY),
+	CONSTRAINT FK_COMP_SUBSCRIPTION_ID_PLAN FOREIGN KEY (ID_PLAN) REFERENCES APP_PLAN(ID_PLAN),
+	CONSTRAINT UQ_COMP_SUBSCRIPTION_DATE_COMP unique( ID_COMP_COMPANY, DATE_START)
+)
+alter table COMP_SUBSCRIPTION add CONSTRAINT DF_COMP_SUBSCRIPTION_USER_CREATED default dbo.Fn_GetConnectedUsername() for USER_CREATED;
+go
+alter table COMP_SUBSCRIPTION add CONSTRAINT DF_COMP_SUBSCRIPTION_USER_MODIFY default dbo.Fn_GetConnectedUsername() for USER_MODIFY;
+go
+
+
+IF OBJECT_ID('dbo.TR_COMP_SUBSCRIPTION_MODIFY') IS NOT NULL
+  DROP TRIGGER TR_COMP_SUBSCRIPTION_MODIFY
+GO
+
+create trigger TR_COMP_SUBSCRIPTION_MODIFY on COMP_SUBSCRIPTION
+for insert,update
+as
+
+if not update(DATE_CREATED) and not update(USER_CREATED) and not update(DATE_MODIFY) and not update(USER_MODIFY)
+begin
+	update a
+	set DATE_MODIFY = getdate(),
+		USER_MODIFY = dbo.Fn_GetConnectedUsername()
+	from COMP_SUBSCRIPTION a
+	join inserted b on a.ID_COMP_SUBSCRIPTION = b.ID_COMP_SUBSCRIPTION
+end
+return
+GO
+
+
+
+CREATE TABLE dbo.MSG_MESSAGE(
+	ID_MSG_MESSAGE int IDENTITY(1,1) NOT NULL,
+	NO_MSG_MESSAGE as 'MSG' + RIGHT('0000000' + cast(ID_MSG_MESSAGE as VARCHAR(7)),7) persisted,
+	FR_TEXT varchar(500) not null,
+	EN_TEXT varchar(500) null,
+	ID_COMP_COMPANY int null,
+	F_ACTIVE bit not null CONSTRAINT DF_MSG_MESSAGE_F_ACTIVE default(1),
+	DATE_CREATED datetime NOT NULL CONSTRAINT DF_MSG_MESSAGE_DATE_CREATED  DEFAULT (getdate()),
+	USER_CREATED varchar(320) NOT NULL,
+	DATE_MODIFY datetime NOT NULL CONSTRAINT DF_MSG_MESSAGE_DATE_MODIFY  DEFAULT (getdate()),
+	USER_MODIFY varchar(320) NOT NULL,
+	CONSTRAINT PK_MSG_MESSAGE primary key(ID_MSG_MESSAGE),	
+	CONSTRAINT FK_MSG_MESSAGE_ID_COMP_COMPANY foreign key(ID_COMP_COMPANY) references COMP_COMPANY(ID_COMP_COMPANY)
+)
+alter table MSG_MESSAGE add CONSTRAINT DF_MSG_MESSAGE_USER_CREATED default dbo.Fn_GetConnectedUsername() for USER_CREATED;
+go
+alter table MSG_MESSAGE add CONSTRAINT DF_MSG_MESSAGE_USER_MODIFY default dbo.Fn_GetConnectedUsername() for USER_MODIFY;
+go
+
+
+IF OBJECT_ID('dbo.TR_MSG_MESSAGE_MODIFY') IS NOT NULL
+  DROP TRIGGER TR_MSG_MESSAGE_MODIFY
+GO
+
+create trigger TR_MSG_MESSAGE_MODIFY on MSG_MESSAGE
+for insert,update
+as
+
+if not update(DATE_CREATED) and not update(USER_CREATED) and not update(DATE_MODIFY) and not update(USER_MODIFY)
+begin
+	update a
+	set DATE_MODIFY = getdate(),
+		USER_MODIFY = dbo.Fn_GetConnectedUsername()
+	from MSG_MESSAGE a
+	join inserted b on a.ID_MSG_MESSAGE = b.ID_MSG_MESSAGE
+end
+return
+GO
+
+
+CREATE TABLE dbo.COMP_ZONE(
+	ID_COMP_ZONE int IDENTITY(1,1) NOT NULL,
+	NO_COMP_ZONE as 'CZN' + RIGHT('0000000' + cast(ID_COMP_ZONE as VARCHAR(7)),7) persisted,
+	FR_DESC varchar(255) not null,
+	EN_DESC varchar(255) null,
+	ID_COMP_COMPANY int not null,
+	F_ACTIVE bit not null CONSTRAINT DF_COMP_ZONE_F_ACTIVE default(1),
+	DATE_CREATED datetime NOT NULL CONSTRAINT DF_COMP_ZONE_DATE_CREATED  DEFAULT (getdate()),
+	USER_CREATED varchar(320) NOT NULL,
+	DATE_MODIFY datetime NOT NULL CONSTRAINT DF_COMP_ZONE_DATE_MODIFY  DEFAULT (getdate()),
+	USER_MODIFY varchar(320) NOT NULL,
+	CONSTRAINT PK_COMP_ZONE primary key(ID_COMP_ZONE),	
+	CONSTRAINT FK_COMP_ZONE_ID_COMP_COMPANY foreign key(ID_COMP_COMPANY) references COMP_COMPANY(ID_COMP_COMPANY),
+	CONSTRAINT UQ_COMP_ZONE_FR_DESC_ID_COMP UNIQUE (FR_DESC, ID_COMP_COMPANY)
+)
+alter table COMP_ZONE add CONSTRAINT DF_COMP_ZONE_USER_CREATED default dbo.Fn_GetConnectedUsername() for USER_CREATED;
+go
+alter table COMP_ZONE add CONSTRAINT DF_COMP_ZONE_USER_MODIFY default dbo.Fn_GetConnectedUsername() for USER_MODIFY;
+go
+
+
+IF OBJECT_ID('dbo.TR_COMP_ZONE_MODIFY') IS NOT NULL
+  DROP TRIGGER TR_COMP_ZONE_MODIFY
+GO
+
+create trigger TR_COMP_ZONE_MODIFY on COMP_ZONE
+for insert,update
+as
+
+if not update(DATE_CREATED) and not update(USER_CREATED) and not update(DATE_MODIFY) and not update(USER_MODIFY)
+begin
+	update a
+	set DATE_MODIFY = getdate(),
+		USER_MODIFY = dbo.Fn_GetConnectedUsername()
+	from COMP_ZONE a
+	join inserted b on a.ID_COMP_ZONE = b.ID_COMP_ZONE
+end
+return
+GO
+
+
+
+
+CREATE TABLE dbo.COMP_CLIENT(
+	ID_COMP_CLIENT int IDENTITY(1,1) NOT NULL,
+	NO_COMP_CLIENT as 'CPC' + RIGHT('0000000' + cast(ID_COMP_CLIENT as VARCHAR(7)),7) persisted,	
+	ID_COMP_ZONE int not null,
+	PHONE_NUMBER varchar(50) not null,
+	EMAIL varchar(320) not null,
+	F_ACTIVE bit not null CONSTRAINT DF_COMP_CLIENT_F_ACTIVE default(1),
+	DATE_CREATED datetime NOT NULL CONSTRAINT DF_COMP_CLIENT_DATE_CREATED  DEFAULT (getdate()),
+	USER_CREATED varchar(320) NOT NULL,
+	DATE_MODIFY datetime NOT NULL CONSTRAINT DF_COMP_CLIENT_DATE_MODIFY  DEFAULT (getdate()),
+	USER_MODIFY varchar(320) NOT NULL,
+	CONSTRAINT PK_COMP_CLIENT primary key(ID_COMP_CLIENT),	
+	CONSTRAINT FK_COMP_CLIENT_ID_COMP_CLIENT foreign key(ID_COMP_ZONE) references COMP_ZONE(ID_COMP_ZONE),
+	CONSTRAINT UQ_COMP_CLIENT_ZONE_PHONE UNIQUE (ID_COMP_ZONE, PHONE_NUMBER)
+)
+alter table COMP_CLIENT add CONSTRAINT DF_COMP_CLIENT_USER_CREATED default dbo.Fn_GetConnectedUsername() for USER_CREATED;
+go
+alter table COMP_CLIENT add CONSTRAINT DF_COMP_CLIENT_USER_MODIFY default dbo.Fn_GetConnectedUsername() for USER_MODIFY;
+go
+
+
+IF OBJECT_ID('dbo.TR_COMP_CLIENT_MODIFY') IS NOT NULL
+  DROP TRIGGER TR_COMP_CLIENT_MODIFY
+GO
+
+create trigger TR_COMP_CLIENT_MODIFY on COMP_CLIENT
+for insert,update
+as
+
+if not update(DATE_CREATED) and not update(USER_CREATED) and not update(DATE_MODIFY) and not update(USER_MODIFY)
+begin
+	update a
+	set DATE_MODIFY = getdate(),
+		USER_MODIFY = dbo.Fn_GetConnectedUsername()
+	from COMP_CLIENT a
+	join inserted b on a.ID_COMP_CLIENT = b.ID_COMP_CLIENT
+end
+return
+GO
+
+
+CREATE TABLE dbo.CONF_USER_ROLE(
+	ID_CONF_USER_ROLE int IDENTITY(1,1) NOT NULL,
+	NAME varchar(40) not null,	
+	F_ACTIVE bit not null CONSTRAINT DF_CONF_USER_ROLE_F_ACTIVE default(1),
+	DATE_CREATED datetime NOT NULL CONSTRAINT DF_CONF_USER_ROLE_DATE_CREATED  DEFAULT (getdate()),
+	USER_CREATED varchar(320) NOT NULL,
+	DATE_MODIFY datetime NOT NULL CONSTRAINT DF_CONF_USER_ROLE_DATE_MODIFY  DEFAULT (getdate()),
+	USER_MODIFY varchar(320) NOT NULL,
+	CONSTRAINT PK_CONF_USER_ROLE primary key(ID_CONF_USER_ROLE),
+	CONSTRAINT UQ_CONF_USER_ROLE_NAME UNIQUE (NAME)
+)
+alter table CONF_USER_ROLE add CONSTRAINT DF_CONF_USER_ROLE_USER_CREATED default dbo.Fn_GetConnectedUsername() for USER_CREATED;
+go
+alter table CONF_USER_ROLE add CONSTRAINT DF_CONF_USER_ROLE_USER_MODIFY default dbo.Fn_GetConnectedUsername() for USER_MODIFY;
+go
+
+
+IF OBJECT_ID('dbo.TR_CONF_USER_ROLE_MODIFY') IS NOT NULL
+  DROP TRIGGER TR_CONF_USER_ROLE_MODIFY
+GO
+
+create trigger TR_CONF_USER_ROLE_MODIFY on CONF_USER_ROLE
+for insert,update
+as
+
+if not update(DATE_CREATED) and not update(USER_CREATED) and not update(DATE_MODIFY) and not update(USER_MODIFY)
+begin
+	update a
+	set DATE_MODIFY = getdate(),
+		USER_MODIFY = dbo.Fn_GetConnectedUsername()
+	from CONF_USER_ROLE a
+	join inserted b on a.ID_CONF_USER_ROLE = b.ID_CONF_USER_ROLE
+end
+return
+GO
+
+
+CREATE TABLE dbo.COMP_USER(
+	ID_COMP_USER int IDENTITY(1,1) NOT NULL,
+	NO_COMP_USER as 'CPU' + RIGHT('0000000' + cast(ID_COMP_USER as VARCHAR(7)),7) persisted,	
+	ID_COMP_COMPANY int not null,
+	ID_CONF_USER_ROLE int not null,
+	F_COMPANY_OWNER bit not null CONSTRAINT DF_COMP_USER_F_COMPANY_OWNER default(0),
+	FIRST_NAME varchar(50) not null,
+	LAST_NAME varchar(50) not null,	
+	EMAIL varchar(320) not null,
+	PASS int not null,	
+	F_ACTIVE bit not null CONSTRAINT DF_COMP_USER_F_ACTIVE default(1),
+	DATE_CREATED datetime NOT NULL CONSTRAINT DF_COMP_USER_DATE_CREATED  DEFAULT (getdate()),
+	USER_CREATED varchar(320) NOT NULL,
+	DATE_MODIFY datetime NOT NULL CONSTRAINT DF_COMP_USER_DATE_MODIFY  DEFAULT (getdate()),
+	USER_MODIFY varchar(320) NOT NULL,
+	CONSTRAINT PK_COMP_USER primary key(ID_COMP_USER),	
+	CONSTRAINT FK_COMP_USER_ID_COMP_COMPANY foreign key(ID_COMP_COMPANY) references COMP_COMPANY(ID_COMP_COMPANY),
+	CONSTRAINT FK_COMP_USER_ID_CONF_USER_ROLE foreign key(ID_CONF_USER_ROLE) references CONF_USER_ROLE(ID_CONF_USER_ROLE),
+	CONSTRAINT UQ_COMP_USER_EMAIL UNIQUE (EMAIL)
+)
+alter table COMP_USER add CONSTRAINT DF_COMP_USER_USER_CREATED default dbo.Fn_GetConnectedUsername() for USER_CREATED;
+go
+alter table COMP_USER add CONSTRAINT DF_COMP_USER_USER_MODIFY default dbo.Fn_GetConnectedUsername() for USER_MODIFY;
+go
+
+
+IF OBJECT_ID('dbo.TR_COMP_USER_MODIFY') IS NOT NULL
+  DROP TRIGGER TR_COMP_USER_MODIFY
+GO
+
+create trigger TR_COMP_USER_MODIFY on COMP_USER
+for insert,update
+as
+
+if not update(DATE_CREATED) and not update(USER_CREATED) and not update(DATE_MODIFY) and not update(USER_MODIFY)
+begin
+	update a
+	set DATE_MODIFY = getdate(),
+		USER_MODIFY = dbo.Fn_GetConnectedUsername()
+	from COMP_USER a
+	join inserted b on a.ID_COMP_USER = b.ID_COMP_USER
+end
+return
+GO
+
+
+CREATE TABLE dbo.APP_PAYMENT_HISTORY(
+	ID_APP_PAYMENT_HISTORY int IDENTITY(1,1) NOT NULL,
+	ID_COMP_SUBSCRIPTION int not null,
+	AMOUNT smallmoney not null,
+	NOTE varchar(500) null,
+	STRIPE_ID varchar(255) not null,
+	PAYMENT_DATE datetime NOT NULL CONSTRAINT DF_APP_PAYMENT_HISTORY_PAYMENT_DATE  DEFAULT (getdate()),
+	F_ACTIVE bit not null CONSTRAINT DF_APP_PAYMENT_HISTORY_F_ACTIVE default(1),
+	DATE_CREATED datetime NOT NULL CONSTRAINT DF_APP_PAYMENT_HISTORY_DATE_CREATED  DEFAULT (getdate()),
+	USER_CREATED varchar(320) NOT NULL,
+	DATE_MODIFY datetime NOT NULL CONSTRAINT DF_APP_PAYMENT_HISTORY_DATE_MODIFY  DEFAULT (getdate()),
+	USER_MODIFY varchar(320) NOT NULL,
+	CONSTRAINT PK_APP_PAYMENT_HISTORY primary key(ID_APP_PAYMENT_HISTORY),	
+	CONSTRAINT FK_APP_PAYMENT_HISTORY_ID_COMP_SUBSCRIPTION foreign key(ID_COMP_SUBSCRIPTION) references COMP_SUBSCRIPTION(ID_COMP_SUBSCRIPTION),
+)
+alter table APP_PAYMENT_HISTORY add CONSTRAINT DF_APP_PAYMENT_HISTORY_USER_CREATED default dbo.Fn_GetConnectedUsername() for USER_CREATED;
+go
+alter table APP_PAYMENT_HISTORY add CONSTRAINT DF_APP_PAYMENT_HISTORY_USER_MODIFY default dbo.Fn_GetConnectedUsername() for USER_MODIFY;
+go
+
+
+IF OBJECT_ID('dbo.TR_APP_PAYMENT_HISTORY_MODIFY') IS NOT NULL
+  DROP TRIGGER TR_APP_PAYMENT_HISTORY_MODIFY
+GO
+
+create trigger TR_APP_PAYMENT_HISTORY_MODIFY on APP_PAYMENT_HISTORY
+for insert,update
+as
+
+if not update(DATE_CREATED) and not update(USER_CREATED) and not update(DATE_MODIFY) and not update(USER_MODIFY)
+begin
+	update a
+	set DATE_MODIFY = getdate(),
+		USER_MODIFY = dbo.Fn_GetConnectedUsername()
+	from APP_PAYMENT_HISTORY a
+	join inserted b on a.ID_APP_PAYMENT_HISTORY = b.ID_APP_PAYMENT_HISTORY
+end
+return
+GO
+
+CREATE TABLE dbo.APP_MESSAGE(
+	ID_APP_MESSAGE int IDENTITY(1,1) NOT NULL,
+	FR_MESSAGE varchar(max) not null,
+	EN_MESSAGE varchar(max) null,	
+	F_ACTIVE bit not null CONSTRAINT DF_APP_MESSAGE_F_ACTIVE default(1),
+	DATE_CREATED datetime NOT NULL CONSTRAINT DF_APP_MESSAGE_DATE_CREATED  DEFAULT (getdate()),
+	USER_CREATED varchar(320) NOT NULL,
+	DATE_MODIFY datetime NOT NULL CONSTRAINT DF_APP_MESSAGE_DATE_MODIFY  DEFAULT (getdate()),
+	USER_MODIFY varchar(320) NOT NULL,
+	CONSTRAINT PK_APP_MESSAGE primary key(ID_APP_MESSAGE)
+)
+alter table APP_MESSAGE add CONSTRAINT DF_APP_MESSAGE_USER_CREATED default dbo.Fn_GetConnectedUsername() for USER_CREATED;
+go
+alter table APP_MESSAGE add CONSTRAINT DF_APP_MESSAGE_USER_MODIFY default dbo.Fn_GetConnectedUsername() for USER_MODIFY;
+go
+
+IF OBJECT_ID('dbo.TR_APP_MESSAGE_MODIFY') IS NOT NULL
+  DROP TRIGGER TR_APP_MESSAGE_MODIFY
+GO
+
+create trigger TR_APP_MESSAGE_MODIFY on APP_MESSAGE
+for insert,update
+as
+
+if not update(DATE_CREATED) and not update(USER_CREATED) and not update(DATE_MODIFY) and not update(USER_MODIFY)
+begin
+	update a
+	set DATE_MODIFY = getdate(),
+		USER_MODIFY = dbo.Fn_GetConnectedUsername()
+	from APP_MESSAGE a
+	join inserted b on a.ID_APP_MESSAGE = b.ID_APP_MESSAGE
+end
+return
+GO
+
+CREATE TABLE dbo.MSG_HISTORY(
+	ID_MSG_HISTORY int IDENTITY(1,1) NOT NULL,
+	ID_COMP_COMPANY int not null,		
+	ID_MSG_MESSAGE int not null,
+	FR_TEXT varchar(500) not null,
+	EN_TEXT varchar(500) null,
+	NB_SUCCEED int not null,
+	NB_ERROR int not null,		
+	DATE_SENT datetime not null CONSTRAINT DF_MSG_HISTORY_DATE_SENT  DEFAULT (getdate()),
+	F_WAS_SCHEDULE bit not null CONSTRAINT DF_MSG_HISTORY_F_WAS_SCHEDULE default(0),
+	F_ACTIVE bit not null CONSTRAINT DF_MSG_HISTORY_F_ACTIVE default(1),
+	DATE_CREATED datetime NOT NULL CONSTRAINT DF_MSG_HISTORY_DATE_CREATED  DEFAULT (getdate()),
+	USER_CREATED varchar(320) NOT NULL,
+	DATE_MODIFY datetime NOT NULL CONSTRAINT DF_MSG_HISTORY_DATE_MODIFY  DEFAULT (getdate()),
+	USER_MODIFY varchar(320) NOT NULL,
+	CONSTRAINT PK_MSG_HISTORY primary key(ID_MSG_HISTORY),	
+	CONSTRAINT FK_MSG_HISTORY_ID_COMP_COMPANY foreign key(ID_COMP_COMPANY) references COMP_COMPANY(ID_COMP_COMPANY),
+	CONSTRAINT FK_MSG_HISTORY_ID_MESSAGE foreign key(ID_MSG_MESSAGE) references MSG_MESSAGE(ID_MSG_MESSAGE)
+)
+alter table MSG_HISTORY add CONSTRAINT DF_MSG_HISTORY_USER_CREATED default dbo.Fn_GetConnectedUsername() for USER_CREATED;
+go
+alter table MSG_HISTORY add CONSTRAINT DF_MSG_HISTORY_USER_MODIFY default dbo.Fn_GetConnectedUsername() for USER_MODIFY;
+go
+
+
+IF OBJECT_ID('dbo.TR_MSG_HISTORY_MODIFY') IS NOT NULL
+  DROP TRIGGER TR_MSG_HISTORY_MODIFY
+GO
+
+create trigger TR_MSG_HISTORY_MODIFY on MSG_HISTORY
+for insert,update
+as
+
+if not update(DATE_CREATED) and not update(USER_CREATED) and not update(DATE_MODIFY) and not update(USER_MODIFY)
+begin
+	update a
+	set DATE_MODIFY = getdate(),
+		USER_MODIFY = dbo.Fn_GetConnectedUsername()
+	from MSG_HISTORY a
+	join inserted b on a.ID_MSG_HISTORY = b.ID_MSG_HISTORY
+end
+return
+GO
+
+
+CREATE TABLE dbo.MSG_HISTORY_ZONE(
+	ID_MSG_HISTORY_ZONE int IDENTITY(1,1) NOT NULL,
+	ID_MSG_HISTORY int not null,
+	ID_COMP_ZONE int not null,				
+	F_ACTIVE bit not null CONSTRAINT DF_MSG_HISTORY_ZONE_F_ACTIVE default(1),
+	DATE_CREATED datetime NOT NULL CONSTRAINT DF_MSG_HISTORY_ZONE_DATE_CREATED  DEFAULT (getdate()),
+	USER_CREATED varchar(320) NOT NULL,
+	DATE_MODIFY datetime NOT NULL CONSTRAINT DF_MSG_HISTORY_ZONE_DATE_MODIFY  DEFAULT (getdate()),
+	USER_MODIFY varchar(320) NOT NULL,
+	CONSTRAINT PK_MSG_HISTORY_ZONE primary key(ID_MSG_HISTORY_ZONE),	
+	CONSTRAINT FK_MSG_HISTORY_ZONE_ID_COMP_ZONE foreign key(ID_COMP_ZONE) references COMP_ZONE(ID_COMP_ZONE),
+	CONSTRAINT FK_MSG_HISTORY_ZONE_ID_MSG_HISTORY foreign key(ID_MSG_HISTORY) references MSG_HISTORY(ID_MSG_HISTORY),
+	CONSTRAINT UQ_MSG_HISTORY_ZONE_ZONE_HISTORY UNIQUE(ID_MSG_HISTORY, ID_COMP_ZONE)
+)
+alter table MSG_HISTORY_ZONE add CONSTRAINT DF_MSG_HISTORY_ZONE_USER_CREATED default dbo.Fn_GetConnectedUsername() for USER_CREATED;
+go
+alter table MSG_HISTORY_ZONE add CONSTRAINT DF_MSG_HISTORY_ZONE_USER_MODIFY default dbo.Fn_GetConnectedUsername() for USER_MODIFY;
+go
+
+
+IF OBJECT_ID('dbo.TR_MSG_HISTORY_ZONE_MODIFY') IS NOT NULL
+  DROP TRIGGER TR_MSG_HISTORY_ZONE_MODIFY
+GO
+
+create trigger TR_MSG_HISTORY_ZONE_MODIFY on MSG_HISTORY_ZONE
+for insert,update
+as
+
+if not update(DATE_CREATED) and not update(USER_CREATED) and not update(DATE_MODIFY) and not update(USER_MODIFY)
+begin
+	update a
+	set DATE_MODIFY = getdate(),
+		USER_MODIFY = dbo.Fn_GetConnectedUsername()
+	from MSG_HISTORY_ZONE a
+	join inserted b on a.ID_MSG_HISTORY_ZONE = b.ID_MSG_HISTORY_ZONE
+end
+return
+GO
+
+
+
+CREATE TABLE dbo.MSG_HISTORY_LOG(
+	ID_MSG_HISTORY_LOG int IDENTITY(1,1) NOT NULL,
+	ID_MSG_HISTORY int not null,
+	LOG_TEXT varchar(max),
+	F_ACTIVE bit not null CONSTRAINT DF_MSG_HISTORY_LOG_F_ACTIVE default(1),
+	DATE_CREATED datetime NOT NULL CONSTRAINT DF_MSG_HISTORY_LOG_DATE_CREATED  DEFAULT (getdate()),
+	USER_CREATED varchar(320) NOT NULL,
+	DATE_MODIFY datetime NOT NULL CONSTRAINT DF_MSG_HISTORY_LOG_DATE_MODIFY  DEFAULT (getdate()),
+	USER_MODIFY varchar(320) NOT NULL,
+	CONSTRAINT PK_MSG_HISTORY_LOG primary key(ID_MSG_HISTORY_LOG),	
+	CONSTRAINT FK_MSG_HISTORY_LOG_ID_MSG_HISTORY foreign key(ID_MSG_HISTORY) references MSG_HISTORY(ID_MSG_HISTORY),
+)
+alter table MSG_HISTORY_LOG add CONSTRAINT DF_MSG_HISTORY_LOG_USER_CREATED default dbo.Fn_GetConnectedUsername() for USER_CREATED;
+go
+alter table MSG_HISTORY_LOG add CONSTRAINT DF_MSG_HISTORY_LOG_USER_MODIFY default dbo.Fn_GetConnectedUsername() for USER_MODIFY;
+go
+
+
+IF OBJECT_ID('dbo.TR_MSG_HISTORY_LOG_MODIFY') IS NOT NULL
+  DROP TRIGGER TR_MSG_HISTORY_LOG_MODIFY
+GO
+
+create trigger TR_MSG_HISTORY_LOG_MODIFY on MSG_HISTORY_LOG
+for insert,update
+as
+
+if not update(DATE_CREATED) and not update(USER_CREATED) and not update(DATE_MODIFY) and not update(USER_MODIFY)
+begin
+	update a
+	set DATE_MODIFY = getdate(),
+		USER_MODIFY = dbo.Fn_GetConnectedUsername()
+	from MSG_HISTORY_LOG a
+	join inserted b on a.ID_MSG_HISTORY_LOG = b.ID_MSG_HISTORY_LOG
+end
+return
+GO
+
+CREATE TABLE dbo.MSG_SCHEDULE(
+	ID_MSG_SCHEDULE int IDENTITY(1,1) NOT NULL,
+	NO_MSG_SCHEDULE as 'MSS' + RIGHT('0000000' + cast(ID_MSG_SCHEDULE as VARCHAR(7)),7) persisted,
+	ID_MSG_MESSAGE int not null,
+	ID_COMP_COMPANY	int not null,
+	TIME_SCHEDULE time not null,
+	DATE_SCHEDULE date not null,
+	F_SENT bit not null CONSTRAINT DF_MSG_SCHEDULE_F_SENT default(0),
+	F_ACTIVE bit not null CONSTRAINT DF_MSG_SCHEDULE_F_ACTIVE default(1),
+	DATE_CREATED datetime NOT NULL CONSTRAINT DF_MSG_SCHEDULE_DATE_CREATED  DEFAULT (getdate()),
+	USER_CREATED varchar(320) NOT NULL,
+	DATE_MODIFY datetime NOT NULL CONSTRAINT DF_MSG_SCHEDULE_DATE_MODIFY  DEFAULT (getdate()),
+	USER_MODIFY varchar(320) NOT NULL,
+	CONSTRAINT PK_MSG_SCHEDULE primary key(ID_MSG_SCHEDULE),	
+	CONSTRAINT FK_MSH_SCHEDULE_ID_MSG_MESSAGE foreign key(ID_MSG_MESSAGE) references MSG_MESSAGE(ID_MSG_MESSAGE),
+	CONSTRAINT FK_MSH_SCHEDULE_ID_COMP_COMPANY foreign key(ID_COMP_COMPANY) references COMP_COMPANY(ID_COMP_COMPANY)
+
+)
+alter table MSG_SCHEDULE add CONSTRAINT DF_MSG_SCHEDULE_USER_CREATED default dbo.Fn_GetConnectedUsername() for USER_CREATED;
+go
+alter table MSG_SCHEDULE add CONSTRAINT DF_MSG_SCHEDULE_USER_MODIFY default dbo.Fn_GetConnectedUsername() for USER_MODIFY;
+go
+
+
+IF OBJECT_ID('dbo.TR_MSG_SCHEDULE_MODIFY') IS NOT NULL
+  DROP TRIGGER TR_MSG_SCHEDULE_MODIFY
+GO
+
+create trigger TR_MSG_SCHEDULE_MODIFY on MSG_SCHEDULE
+for insert,update
+as
+
+if not update(DATE_CREATED) and not update(USER_CREATED) and not update(DATE_MODIFY) and not update(USER_MODIFY)
+begin
+	update a
+	set DATE_MODIFY = getdate(),
+		USER_MODIFY = dbo.Fn_GetConnectedUsername()
+	from MSG_SCHEDULE a
+	join inserted b on a.ID_MSG_SCHEDULE = b.ID_MSG_SCHEDULE
+end
+return
+GO
+
+
+
+CREATE TABLE dbo.MSG_SCHEDULE_ZONE(
+	ID_MSG_SCHEDULE_ZONE int IDENTITY(1,1) NOT NULL,	
+	ID_MSG_SCHEDULE int not null,
+	ID_COMP_ZONE int not null,
+	F_ACTIVE bit not null CONSTRAINT DF_MSG_SCHEDULE_ZONE_F_ACTIVE default(1),
+	DATE_CREATED datetime NOT NULL CONSTRAINT DF_MSG_SCHEDULE_ZONE_DATE_CREATED  DEFAULT (getdate()),
+	USER_CREATED varchar(320) NOT NULL,
+	DATE_MODIFY datetime NOT NULL CONSTRAINT DF_MSG_SCHEDULE_ZONE_DATE_MODIFY  DEFAULT (getdate()),
+	USER_MODIFY varchar(320) NOT NULL,
+	CONSTRAINT PK_MSG_SCHEDULE_ZONE primary key(ID_MSG_SCHEDULE_ZONE),	
+	CONSTRAINT FK_MSG_SCHEDULE_ID_MSG_SCHEDULE foreign key(ID_MSG_SCHEDULE) references MSG_SCHEDULE(ID_MSG_SCHEDULE),
+	CONSTRAINT FK_MSG_SCHEDULE_ID_COMP_ZONE foreign key(ID_COMP_ZONE) references COMP_ZONE(ID_COMP_ZONE),
+	CONSTRAINT UQ_MSG_SCHEDULE_ZONE_MSG unique(ID_COMP_ZONE,ID_MSG_SCHEDULE)
+
+)
+alter table MSG_SCHEDULE_ZONE add CONSTRAINT DF_MSG_SCHEDULE_ZONE_USER_CREATED default dbo.Fn_GetConnectedUsername() for USER_CREATED;
+go
+alter table MSG_SCHEDULE_ZONE add CONSTRAINT DF_MSG_SCHEDULE_ZONE_USER_MODIFY default dbo.Fn_GetConnectedUsername() for USER_MODIFY;
+go
+
+
+IF OBJECT_ID('dbo.TR_MSG_SCHEDULE_ZONE_MODIFY') IS NOT NULL
+  DROP TRIGGER TR_MSG_SCHEDULE_ZONE_MODIFY
+GO
+
+create trigger TR_MSG_SCHEDULE_ZONE_MODIFY on MSG_SCHEDULE_ZONE
+for insert,update
+as
+
+if not update(DATE_CREATED) and not update(USER_CREATED) and not update(DATE_MODIFY) and not update(USER_MODIFY)
+begin
+	update a
+	set DATE_MODIFY = getdate(),
+		USER_MODIFY = dbo.Fn_GetConnectedUsername()
+	from MSG_SCHEDULE_ZONE a
+	join inserted b on a.ID_MSG_SCHEDULE_ZONE = b.ID_MSG_SCHEDULE_ZONE
+end
+return
+GO
+
+
+
+insert into CONF_VERSION(DB_VERSION) values(1);
