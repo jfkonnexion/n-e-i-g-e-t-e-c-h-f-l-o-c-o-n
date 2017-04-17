@@ -1,0 +1,16 @@
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\test\test\obj\Debug\test.csprojResolveAssemblyReference.cache
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\test\test\obj\Debug\test.Properties.Resources.resources
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\test\test\obj\Debug\test.csproj.GenerateResource.Cache
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\test\test\bin\Debug\test.exe.config
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\test\test\bin\Debug\test.exe
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\test\test\bin\Debug\test.pdb
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\test\test\bin\Debug\SmsNotification.dll
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\test\test\bin\Debug\AWSSDK.Core.dll
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\test\test\bin\Debug\SmsNotification.pdb
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\test\test\bin\Debug\AWSSDK.Core.pdb
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\test\test\bin\Debug\AWSSDK.Core.xml
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\test\test\obj\Debug\test.exe
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\test\test\obj\Debug\test.pdb
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\test\test\bin\Debug\AWSSDK.SimpleNotificationService.dll
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\test\test\bin\Debug\AWSSDK.SimpleNotificationService.pdb
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\test\test\bin\Debug\AWSSDK.SimpleNotificationService.xml

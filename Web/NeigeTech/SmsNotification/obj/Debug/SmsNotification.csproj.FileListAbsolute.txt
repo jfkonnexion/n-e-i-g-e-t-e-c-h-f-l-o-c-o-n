@@ -1,0 +1,11 @@
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\NeigeTech\SmsNotification\bin\Debug\SmsNotification.dll
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\NeigeTech\SmsNotification\bin\Debug\SmsNotification.pdb
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\NeigeTech\SmsNotification\bin\Debug\AWSSDK.Core.dll
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\NeigeTech\SmsNotification\bin\Debug\AWSSDK.SimpleNotificationService.dll
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\NeigeTech\SmsNotification\bin\Debug\AWSSDK.Core.pdb
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\NeigeTech\SmsNotification\bin\Debug\AWSSDK.Core.xml
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\NeigeTech\SmsNotification\bin\Debug\AWSSDK.SimpleNotificationService.pdb
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\NeigeTech\SmsNotification\bin\Debug\AWSSDK.SimpleNotificationService.xml
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\NeigeTech\SmsNotification\obj\Debug\SmsNotification.dll
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\NeigeTech\SmsNotification\obj\Debug\SmsNotification.pdb
+C:\Mon Dossier\DevloRa\Konnexion\neige.tech\Web\NeigeTech\SmsNotification\obj\Debug\SmsNotification.csprojResolveAssemblyReference.cache
